@@ -135,7 +135,6 @@ function handler(req: Request): Response {
         case "/global.css":
             return css();
         default:
-            console.log(url.pathname, getAvailableArticles());
             if (getAvailableArticles().includes(url.pathname.slice(1)))
                 return article(url.pathname.slice(1));
 
