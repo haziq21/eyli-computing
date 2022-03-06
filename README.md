@@ -9,3 +9,5 @@ Hi, I'm Haziq Hairil, a student at the School of Science and Technology, Singapo
 ## Who this guide is for
 
 This guide is targeted at existing Computing+ students as a form of revision, as well as lower secondary students to spark their interest in joining Computing+ in SST.
+
+## How it works

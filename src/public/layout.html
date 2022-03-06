@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/global.css">
+    <title>{{title}}</title>
+</head>
+
+<body class="bg-zinc-900 h-full text-white">
+    <nav class="bg-zinc-800 h-14 pt-5 overflow-y-auto lg:h-full lg:w-80 lg:fixed">
+        <div class="uppercase text-center font-semibold text-2xl tracking-wider">
+            EYLI <span class="text-amber-200">Computing</span>
+        </div>
+    </nav>
+    <main class="h-full px-8 pt-4 lg:pt-16 lg:ml-80">
+        <article class="mx-auto w-full max-w-[50rem]">
+            {{slot}}
+        </article>
+    </main>
+</body>
+
+</html>
