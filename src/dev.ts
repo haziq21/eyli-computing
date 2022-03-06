@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
 import { Processor } from "https://esm.sh/windicss/lib";
-import { HTMLParser } from "https://esm.sh/windicss/utils/parser";
+import { HTMLParser, CSSParser } from "https://esm.sh/windicss/utils/parser";
 import { StyleSheet } from "https://esm.sh/windicss/utils/style";
 import { micromark } from "https://esm.sh/micromark";
 
@@ -15,7 +15,7 @@ function compileWindi(html: string): { html: string; css: string } {
     const processor = new Processor();
 
     // Parse HTML to get array of class matches with location
-    const parser = new HTMLParser(html);
+    const htmlParser = new HTMLParser(html);
 
     // Generate preflight based on the HTML we input
     const preflightSheet = processor.preflight(html);
@@ -25,7 +25,7 @@ function compileWindi(html: string): { html: string; css: string } {
     let outputHTML = "";
     let indexStart = 0;
 
-    parser.parseClasses().forEach((p) => {
+    htmlParser.parseClasses().forEach((p) => {
         // Add HTML substring from index to match start
         outputHTML += html.substring(indexStart, p.start);
 
@@ -42,8 +42,20 @@ function compileWindi(html: string): { html: string; css: string } {
         indexStart = p.end;
     });
 
+    // Include styles found in `<style lang="windi">` tags
+    const block = html.match(
+        /(?<=<style lang=['"]windi["']>)[\s\S]*(?=<\/style>)/
+    );
+    const blockStart = block!.index!;
+    const blockEnd = blockStart + block![0].length;
+
+    const css = html.slice(blockStart, blockEnd);
+    const cssParser = new CSSParser(css, processor);
+    outputCSS.push(cssParser.parse());
+
     // Append the remaining HTML
-    outputHTML += html.substring(indexStart);
+    outputHTML += html.substring(indexStart, blockStart);
+    outputHTML += html.substring(blockEnd);
 
     // Build styles
     const MINIFY = false;
