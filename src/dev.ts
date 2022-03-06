@@ -1,16 +1,15 @@
-import { readFileSync, readdirSync, watch } from "fs";
-import server from "server";
-import { type, status } from "server/reply";
-import { Processor } from "windicss/lib";
-import { HTMLParser } from "windicss/utils/parser";
+import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
+import { Processor } from "https://esm.sh/windicss/lib";
+import { HTMLParser } from "https://esm.sh/windicss/utils/parser";
+import { micromark } from "https://esm.sh/micromark";
 
-const micromark = await import("micromark");
+/**************        CODE FOR SITE GENERATION        **************/
 
 /**
  * Given a HTML document containing Windi classes, output the corresponding stylesheet.
  * Taken from https://windicss.org/integrations/javascript.html.
  */
-function generateStyles(html: string) {
+function generateStylesheet(html: string) {
     // Get windi processor
     const processor = new Processor();
 
@@ -36,11 +35,13 @@ function generateStyles(html: string) {
     return styles;
 }
 
+/** Return an array of all the Markdown articles in `/pages`. */
 function getAvailableArticles(): string[] {
-    let articles: string[] = [];
-    readdirSync("pages").forEach((f) => {
-        if (f.endsWith(".md")) articles.push(f.slice(0, -3));
-    });
+    const articles: string[] = [];
+
+    for (const f of Deno.readDirSync("pages")) {
+        if (f.name.endsWith(".md")) articles.push(f.name.slice(0, -3));
+    }
 
     return articles;
 }
@@ -65,84 +66,82 @@ function hydrate(html: string, targets: Record<string, string>): string {
     return html;
 }
 
-let layoutHtml = readFileSync("src/public/layout.html", "utf8");
-let indexHtml = readFileSync("src/public/index.html", "utf8");
-let indexCss = generateStyles(indexHtml);
-let layoutCss = generateStyles(layoutHtml);
+/** Generate the `global.css` file used by `index.html` and `layout.html`. */
+function generateGlobalCSS(): string {
+    let stylesheet = "";
 
-let articles: Record<string, { title: string; html: string }> = {};
+    for (const f of ["index", "layout"])
+        stylesheet += generateStylesheet(
+            Deno.readTextFileSync(`src/public/${f}.html`)
+        );
 
-for (const file of readdirSync("pages")) {
-    if (!file.endsWith(".md")) continue;
-
-    const md = readFileSync(`pages/${file}`, "utf8");
-
-    articles[file.slice(0, -3)] = {
-        title: md.match(/^#\s(.+)$/m)![1],
-        html: generateHtml(md),
-    };
+    return stylesheet;
 }
 
-// Save HTML & re-compile stylesheet when index.html or layout.html is modified
-watch("src/public", (eventType, filename) => {
-    // Skip if it wasn't the HTML that got updated
-    if (
-        (filename !== "index.html" && filename !== "layout.html") ||
-        eventType !== "change"
-    )
-        return;
+/**************        CODE FOR WEB SERVER        **************/
 
-    process.stdout.write(`Rebuilding ${filename}...  `);
+const RESPONSE_INIT = {
+    html: {
+        headers: {
+            "content-type": "text/html; charset=utf-8",
+        },
+    },
+    css: {
+        headers: {
+            "content-type": "text/css; charset=utf-8",
+        },
+    },
+    notFound: {
+        status: 404,
+        headers: {
+            "content-type": "text/plain; charset=utf-8",
+        },
+    },
+};
 
-    // Get the HTML and generate the stylesheets
-    const html = readFileSync(`src/public/${filename}`, "utf8");
-    const css = generateStyles(html);
+/** Response to the `/` route of the webapp. */
+function index(): Response {
+    const html = hydrate(Deno.readTextFileSync("src/public/layout.html"), {
+        title: "EYLI Computing",
+        slot: Deno.readTextFileSync("src/public/index.html"),
+    });
 
-    // Save the HTML & CSS
-    if (filename === "index.html") {
-        [indexHtml, indexCss] = [html, css];
-    } else {
-        [layoutHtml, layoutCss] = [html, css];
-    }
+    return new Response(html, RESPONSE_INIT.html);
+}
 
-    process.stdout.write("done\n");
-});
+/** Response to the `global.css` route of the webapp */
+function css(): Response {
+    return new Response(generateGlobalCSS(), RESPONSE_INIT.css);
+}
 
-// Re-compile HTML when Markdown is modified
-watch("pages", (eventType, filename) => {
-    // Skip if it wasn't the Markdown that got updated
-    if (!filename.endsWith(".md") || eventType !== "change") return;
-
-    const md = readFileSync(`pages/${filename}`, "utf8");
-
-    articles[filename.slice(0, -3)] = {
+/** Response to the `/<article>` route of the webapp. This assumes that the article exists. */
+function article(articleId: string): Response {
+    const md = Deno.readTextFileSync(`pages/${articleId}.md`);
+    const html = hydrate(Deno.readTextFileSync("src/public/layout.html"), {
         title: md.match(/^#\s(.+)$/m)![1],
-        html: generateHtml(md),
-    };
-});
+        slot: generateHtml(md),
+    });
 
-const { get } = server.router;
-// Dev server to host the webapp
-server(
-    { port: 3000 },
-    get("/global.css", (_) => type("text/css").send(indexCss + layoutCss)),
-    get("/", (_) =>
-        hydrate(layoutHtml, {
-            title: "EYLI Computing",
-            slot: indexHtml,
-        })
-    ),
-    get("/:article", (ctx) => {
-        const articleId = ctx.params.article;
+    return new Response(html, RESPONSE_INIT.html);
+}
 
-        // Return a 404 if the article doesn't exist
-        if (!(articleId in articles)) return status(404);
+/** Handle HTTP requests from the webapp. */
+function handler(req: Request): Response {
+    const url = new URL(req.url);
 
-        return hydrate(layoutHtml, {
-            title: articles[articleId].title,
-            slot: articles[articleId].html,
-        });
-    })
-).then((app) =>
-    console.log(`Dev server running on http://127.0.0.1:${app.options.port}`)
-);
+    switch (url.pathname) {
+        case "/":
+            return index();
+        case "/global.css":
+            return css();
+        default:
+            console.log(url.pathname, getAvailableArticles());
+            if (getAvailableArticles().includes(url.pathname.slice(1)))
+                return article(url.pathname.slice(1));
+
+            return new Response("404: Not found", RESPONSE_INIT.notFound);
+    }
+}
+
+serve(handler, { port: 3000 });
+console.log("Dev server on http://localhost:3000");
