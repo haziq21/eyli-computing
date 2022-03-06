@@ -3,6 +3,7 @@ import { Processor } from "https://esm.sh/windicss/lib";
 import { HTMLParser, CSSParser } from "https://esm.sh/windicss/utils/parser";
 import { StyleSheet } from "https://esm.sh/windicss/utils/style";
 import { micromark } from "https://esm.sh/micromark";
+import { gfm, gfmHtml } from "https://esm.sh/micromark-extension-gfm";
 
 /**************        CODE FOR SITE GENERATION        **************/
 
@@ -85,7 +86,11 @@ function getAvailableArticles(): string[] {
  * Given a Markdown document, return the HTML generated from it.
  */
 function generateHtml(md: string): string {
-    return micromark(md);
+    return micromark(md, {
+        allowDangerousHtml: true,
+        extensions: [gfm()],
+        htmlExtensions: [gfmHtml()],
+    });
 }
 
 /**
@@ -160,11 +165,21 @@ function index(): Response {
  * that the article exists.  Writes to `globalStyleCache`.
  */
 function article(articleId: string): Response {
+    const articles = getAvailableArticles().sort();
+    const isFirstArticle = articleId === articles[0];
+    const isLastArticle = articleId === articles.at(-1);
     const md = Deno.readTextFileSync(`pages/${articleId}.md`);
-    const hydratedPage = hydrateLayout({
-        title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
-        slot: generateHtml(md),
-    });
+
+    const hydratedPage = hydrateLayout(
+        {
+            title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
+            slot: generateHtml(md),
+            prevUrl: isFirstArticle
+                ? "/"
+                : "/" + articles[articles.indexOf(articleId) - 1],
+        },
+        isLastArticle ? ["nextButton"] : []
+    );
 
     const { html, css } = compileWindi(hydratedPage);
     globalStyleCache = css;
