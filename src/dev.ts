@@ -44,18 +44,18 @@ function compileWindi(html: string): { html: string; css: string } {
 
     // Include styles found in `<style lang="windi">` tags
     const block = html.match(
-        /(?<=<style lang=['"]windi["']>)[\s\S]*(?=<\/style>)/
-    );
-    const blockStart = block!.index!;
-    const blockEnd = blockStart + block![0].length;
+        /(<style lang=['"]windi["']>)([\s\S]*)(<\/style>)/
+    )!;
+    const blockStart = block.index!;
+    const contentStart = blockStart + block[1].length;
 
-    const css = html.slice(blockStart, blockEnd);
+    const css = html.slice(contentStart, contentStart + block[2].length);
     const cssParser = new CSSParser(css, processor);
     outputCSS.push(cssParser.parse());
 
     // Append the remaining HTML
     outputHTML += html.substring(indexStart, blockStart);
-    outputHTML += html.substring(blockEnd);
+    outputHTML += html.substring(blockStart + block[0].length);
 
     // Build styles
     const MINIFY = false;
@@ -92,11 +92,26 @@ function generateHtml(md: string): string {
  * Given a `(slot id, content to hydrate)` hashmap, return  `layout.html`
  * with every `{{slot id}}` replaced by the corresponding content to hydrate.
  */
-function hydrateLayout(targets: Record<string, string>): string {
+function hydrateLayout(
+    targets: Record<string, string>,
+    exclude: string[] = []
+): string {
     let html = Deno.readTextFileSync("src/public/layout.html");
 
     for (const t in targets) {
         html = html.replace(`{{${t}}}`, targets[t]);
+    }
+
+    const blocks = html.matchAll(/(\[\[[a-zA-Z]+\]\])([^]+)\1/gm);
+    for (const b of Array.from(blocks).reverse()) {
+        if (exclude.includes(b[1].slice(2, -2))) {
+            html = html.slice(0, b.index!) + html.slice(b.index! + b[0].length);
+        } else {
+            html =
+                html.slice(0, b.index!) +
+                b[2] +
+                html.slice(b.index! + b[0].length);
+        }
     }
 
     return html;
@@ -125,10 +140,14 @@ const RESPONSE_INIT = {
 
 /** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
-    const hydratedPage = hydrateLayout({
-        title: "EYLI Computing",
-        slot: Deno.readTextFileSync("src/public/index.html"),
-    });
+    const hydratedPage = hydrateLayout(
+        {
+            title: "EYLI Computing",
+            slot: Deno.readTextFileSync("src/public/index.html"),
+            nextUrl: getAvailableArticles().sort()[0],
+        },
+        ["prevButton"]
+    );
 
     const { html, css } = compileWindi(hydratedPage);
     globalStyleCache = css;
