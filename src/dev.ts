@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
 import { Processor } from "https://esm.sh/windicss/lib";
 import { HTMLParser } from "https://esm.sh/windicss/utils/parser";
+import { StyleSheet } from "https://esm.sh/windicss/utils/style";
 import { micromark } from "https://esm.sh/micromark";
 
 /**************        CODE FOR SITE GENERATION        **************/
@@ -9,30 +10,52 @@ import { micromark } from "https://esm.sh/micromark";
  * Given a HTML document containing Windi classes, output the corresponding stylesheet.
  * Taken from https://windicss.org/integrations/javascript.html.
  */
-function generateStylesheet(html: string) {
+function compileWindi(html: string): { html: string; css: string } {
     // Get windi processor
     const processor = new Processor();
 
-    // Parse all classes and put into one line to simplify operations
-    const htmlClasses = new HTMLParser(html)
-        .parseClasses()
-        .map((i) => i.result)
-        .join(" ");
+    // Parse HTML to get array of class matches with location
+    const parser = new HTMLParser(html);
 
     // Generate preflight based on the HTML we input
     const preflightSheet = processor.preflight(html);
 
-    // Process the HTML classes to an interpreted style sheet
-    const interpretedSheet = processor.interpret(htmlClasses).styleSheet;
+    const PREFIX = "windi-";
+    const outputCSS: StyleSheet[] = [];
+    let outputHTML = "";
+    let indexStart = 0;
+
+    parser.parseClasses().forEach((p) => {
+        // Add HTML substring from index to match start
+        outputHTML += html.substring(indexStart, p.start);
+
+        // Generate stylesheet
+        const style = processor.compile(p.result, PREFIX);
+
+        // Add the stylesheet to the styles stack
+        outputCSS.push(style.styleSheet);
+
+        // Append ignored classes and push to output
+        outputHTML += [style.className, ...style.ignored].join(" ");
+
+        // Mark the end as our new start for next iteration
+        indexStart = p.end;
+    });
+
+    // Append the remaining HTML
+    outputHTML += html.substring(indexStart);
 
     // Build styles
-    const APPEND = false;
     const MINIFY = false;
-    const styles = interpretedSheet
-        .extend(preflightSheet, APPEND)
+    const styles = outputCSS
+        // Extend the preflight sheet with each sheet from the stack
+        .reduce((acc, curr) => acc.extend(curr), preflightSheet)
         .build(MINIFY);
 
-    return styles;
+    return {
+        css: styles,
+        html: outputHTML,
+    };
 }
 
 /** Return an array of all the Markdown articles in `/pages`. */
@@ -54,28 +77,17 @@ function generateHtml(md: string): string {
 }
 
 /**
- * Given a HTML document and a `(slot id, content to hydrate)` hashmap,
- * return the HTML document with every `{{slot id}}` replaced by the
- * corresponding content to hydrate.
+ * Given a `(slot id, content to hydrate)` hashmap, return  `layout.html`
+ * with every `{{slot id}}` replaced by the corresponding content to hydrate.
  */
-function hydrate(html: string, targets: Record<string, string>): string {
+function hydrateLayout(targets: Record<string, string>): string {
+    let html = Deno.readTextFileSync("src/public/layout.html");
+
     for (const t in targets) {
         html = html.replace(`{{${t}}}`, targets[t]);
     }
 
     return html;
-}
-
-/** Generate the `global.css` file used by `index.html` and `layout.html`. */
-function generateGlobalCSS(): string {
-    let stylesheet = "";
-
-    for (const f of ["index", "layout"])
-        stylesheet += generateStylesheet(
-            Deno.readTextFileSync(`src/public/${f}.html`)
-        );
-
-    return stylesheet;
 }
 
 /**************        CODE FOR WEB SERVER        **************/
@@ -99,31 +111,37 @@ const RESPONSE_INIT = {
     },
 };
 
-/** Response to the `/` route of the webapp. */
+/** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
-    const html = hydrate(Deno.readTextFileSync("src/public/layout.html"), {
+    const hydratedPage = hydrateLayout({
         title: "EYLI Computing",
         slot: Deno.readTextFileSync("src/public/index.html"),
     });
 
+    const { html, css } = compileWindi(hydratedPage);
+    globalStyleCache = css;
+
     return new Response(html, RESPONSE_INIT.html);
 }
 
-/** Response to the `global.css` route of the webapp */
-function css(): Response {
-    return new Response(generateGlobalCSS(), RESPONSE_INIT.css);
-}
-
-/** Response to the `/<article>` route of the webapp. This assumes that the article exists. */
+/**
+ * Response to the `/<article>` route of the webapp, assuming
+ * that the article exists.  Writes to `globalStyleCache`.
+ */
 function article(articleId: string): Response {
     const md = Deno.readTextFileSync(`pages/${articleId}.md`);
-    const html = hydrate(Deno.readTextFileSync("src/public/layout.html"), {
-        title: md.match(/^#\s(.+)$/m)![1],
+    const hydratedPage = hydrateLayout({
+        title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
         slot: generateHtml(md),
     });
 
+    const { html, css } = compileWindi(hydratedPage);
+    globalStyleCache = css;
+
     return new Response(html, RESPONSE_INIT.html);
 }
+
+let globalStyleCache = "";
 
 /** Handle HTTP requests from the webapp. */
 function handler(req: Request): Response {
@@ -133,7 +151,9 @@ function handler(req: Request): Response {
         case "/":
             return index();
         case "/global.css":
-            return css();
+            // This assumes that a request to `/global.css` will
+            // always come after a request to `/` or `/<article>`
+            return new Response(globalStyleCache, RESPONSE_INIT.css);
         default:
             if (getAvailableArticles().includes(url.pathname.slice(1)))
                 return article(url.pathname.slice(1));
