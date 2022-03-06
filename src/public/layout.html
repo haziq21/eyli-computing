@@ -18,16 +18,45 @@
             EYLI <span class="text-amber-200">Computing</span>
         </a>
     </nav>
-    <main class="h-full px-8 pt-4 lg:pt-16 lg:ml-80">
-        <article class="mx-auto w-full max-w-[50rem]">
+    <main class="h-full flex lg:ml-80">
+        <a href="{{prevUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center
+        invisible [[prevButton]]visible[[prevButton]] duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+            <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
+                class="fill-zinc-300">
+                <path d="M0 0h24v24H0V0z" fill="none" />
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59z" />
+            </svg>
+        </a>
+
+        <article class="flex flex-col mx-auto w-max max-w-[50rem] text-zinc-300 px-8 pt-4 lg:pt-16">
             {{slot}}
         </article>
+
+        <a href="{{nextUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center 
+        invisible [[nextButton]]visible[[nextButton]] duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+            <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
+                class="fill-zinc-300">
+                <path d="M0 0h24v24H0V0z" fill="none" />
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" />
+            </svg>
+        </a>
     </main>
 </body>
 
 <style lang="windi">
-    p {
-        @apply mt-4;
+    article {
+        & p {
+            @apply mt-2;
+        }
+
+        & h2 {
+            @apply text-white text-2xl font-semibold mt-6;
+        }
+
+        & h1 {
+            @apply text-white text-4xl font-bold;
+        }
+
     }
 </style>
 
