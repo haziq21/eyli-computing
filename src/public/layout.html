@@ -14,9 +14,12 @@
 
 <body class="bg-zinc-900 h-full text-white">
     <nav class="bg-zinc-800 h-14 pt-5 overflow-y-auto lg:h-full lg:w-80 lg:fixed">
-        <a href="/" class="uppercase block text-center font-semibold text-2xl tracking-wider">
+        <a href="/" class="uppercase block text-center font-semibold text-xl tracking-wider">
             EYLI <span class="text-amber-200">Computing</span>
         </a>
+        <div class="nav-wrapper">
+            {{nav}}
+        </div>
     </nav>
     <main class="h-full flex lg:ml-80">
         <a href="{{prevUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center
@@ -28,8 +31,8 @@
             </svg>
         </a>
 
-        <article class="flex flex-col mx-auto w-full max-w-[50rem] text-zinc-300 px-8 pt-4 lg:pt-16">
-            {{slot}}
+        <article class="flex flex-col mx-auto w-full max-w-[50rem] text-zinc-300 px-8 pt-4 pb-40 lg:pt-16">
+            {{article}}
         </article>
 
         <a href="{{nextUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center 
@@ -50,11 +53,34 @@
         }
 
         & h2 {
-            @apply text-white text-2xl font-semibold mt-6;
+            @apply text-white text-2xl font-semibold mt-7;
         }
 
         & h1 {
             @apply text-white text-4xl font-bold;
+        }
+
+        & table {
+            & thead {
+                @apply border-b-2 border-amber-200;
+            }
+
+            & th {
+                @apply text-white font-semibold;
+            }
+
+            & tbody tr {
+                @apply text-center h-8;
+            }
+
+            & tbody tr:nth-child(odd) {
+                @apply bg-[#524D3D];
+            }
+
+            & th,
+            td {
+                /* @apply max-w-44; */
+            }
         }
 
     }

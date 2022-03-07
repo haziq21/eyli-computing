@@ -99,17 +99,58 @@ function generateHtml(md: string): string {
 }
 
 /**
- * Given IDs for slots and their  hashmap, return  `layout.html`
+ * Given IDs for slots and their  hashmap, return  the HTML
  * with every `{{slot id}}` replaced by the corresponding content to hydrate.
  */
-function hydrateLayout(targets: Record<string, string>): string {
-    let html = Deno.readTextFileSync("src/public/layout.html");
-
+function hydrate(html: string, targets: Record<string, string>): string {
     for (const t in targets) {
         html = html.replace(`{{${t}}}`, targets[t]);
     }
 
     return html;
+}
+
+/** Return the HTML of the navigation side bar. */
+function generateNavBar(): string {
+    let navHtml = "";
+
+    // Each article gets its own section
+    for (const file of getAvailableArticles().sort()) {
+        // Get the markdown of the article
+        const md = Deno.readTextFileSync(`pages/${file}.md`);
+        // Get the title of the article
+        const heading = md.match(/^#\s(.+)$/m)![1];
+        // Get the subheaders of the article
+        const subheadings = Array.from(md.matchAll(/^##\s(.+)$/gm))
+            .map((t) => t[1])
+            .slice(1);
+
+        // HTML template for subheading navigation
+        const subheadingTemplate = Deno.readTextFileSync(
+            "src/public/subchapterNav.html"
+        );
+
+        // HTML template for article navigation
+        const articleTemplate = Deno.readTextFileSync(
+            "src/public/chapterNav.html"
+        );
+        let allSubheadings = "";
+
+        // Hydrate all the subheading templates
+        for (const text of subheadings) {
+            allSubheadings += hydrate(subheadingTemplate, {
+                subheading: text,
+            });
+        }
+
+        // Hydrate the entire article nav
+        navHtml += hydrate(articleTemplate, {
+            chapterTitle: heading,
+            subheadings: allSubheadings,
+        });
+    }
+
+    return navHtml;
 }
 
 /**************        CODE FOR WEB SERVER        **************/
@@ -135,14 +176,22 @@ const RESPONSE_INIT = {
 
 /** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
-    const hydratedPage = hydrateLayout({
-        title: "EYLI Computing",
-        slot: Deno.readTextFileSync("src/public/index.html"),
-        // The next article is the first article
-        nextUrl: getAvailableArticles().sort()[0],
-    });
+    const hydratedPage = hydrate(
+        Deno.readTextFileSync("src/public/layout.html"),
+        {
+            title: "EYLI Computing",
+            article: Deno.readTextFileSync("src/public/index.html"),
+            // The next article is the first article
+            nextUrl: getAvailableArticles().sort()[0],
+            nav: generateNavBar(),
+        }
+    );
 
-    const { html, css } = compileWindi(hydratedPage);
+    let { html, css } = compileWindi(hydratedPage);
+
+    // Hide prev button on the homepage
+    css += ".prevButton {visibility: hidden;}";
+
     // Save the stylesheet
     globalStyleCache = css;
 
@@ -159,15 +208,19 @@ function article(articleId: string): Response {
     const isLastArticle = articleId === articles.at(-1);
     const md = Deno.readTextFileSync(`pages/${articleId}.md`);
 
-    const hydratedPage = hydrateLayout({
-        // E.g. "Flowcharts | EYLI Computing"
-        title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
-        slot: generateHtml(md),
-        prevUrl: isFirstArticle
-            ? "/"
-            : "/" + articles[articles.indexOf(articleId) - 1],
-        nextUrl: "/" + articles[articles.indexOf(articleId) + 1],
-    });
+    const hydratedPage = hydrate(
+        Deno.readTextFileSync("src/public/layout.html"),
+        {
+            // E.g. "Flowcharts | EYLI Computing"
+            title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
+            article: generateHtml(md),
+            prevUrl: isFirstArticle
+                ? "/"
+                : "/" + articles[articles.indexOf(articleId) - 1],
+            nextUrl: "/" + articles[articles.indexOf(articleId) + 1],
+            nav: generateNavBar(),
+        }
+    );
 
     let { html, css } = compileWindi(hydratedPage);
 
