@@ -10,4 +10,10 @@ Hi, I'm Haziq Hairil, a student at the School of Science and Technology, Singapo
 
 This guide is targeted at existing Computing+ students as a form of revision, as well as lower secondary students to spark their interest in joining Computing+ in SST.
 
-## How it works
+## Developing
+
+Run the dev server with
+
+```
+deno run --allow-net --allow-read --watch --unstable src/dev.ts
+```
