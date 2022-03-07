@@ -1,3 +1,5 @@
+/** This file contains the code for the dev server, to be ran whilst developing the webapp. */
+
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
 
 import { Processor } from "https://esm.sh/windicss/lib";
@@ -200,4 +202,4 @@ function handler(req: Request): Response {
 }
 
 serve(handler, { port: 3000 });
-console.log("Dev server on http://localhost:3000");
+console.log("Dev server running on http://localhost:3000");
