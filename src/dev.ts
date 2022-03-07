@@ -166,6 +166,11 @@ const RESPONSE_INIT = {
             "content-type": "text/css; charset=utf-8",
         },
     },
+    svg: {
+        headers: {
+            "content-type": "image/svg+xml",
+        },
+    },
     notFound: {
         status: 404,
         headers: {
@@ -173,6 +178,8 @@ const RESPONSE_INIT = {
         },
     },
 };
+
+const notFoundResponse = new Response("404: Not found", RESPONSE_INIT.notFound);
 
 /** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
@@ -239,18 +246,29 @@ let globalStyleCache = "";
 function handler(req: Request): Response {
     const url = new URL(req.url);
 
-    switch (url.pathname) {
-        case "/":
-            return index();
-        case "/global.css":
-            // This assumes that a request to `/global.css` will
-            // always come after a request to `/` or `/<article>`
-            return new Response(globalStyleCache, RESPONSE_INIT.css);
-        default:
-            if (getAvailableArticles().includes(url.pathname.slice(1)))
-                return article(url.pathname.slice(1));
+    if (url.pathname === "/") {
+        return index();
+    } else if (url.pathname === "/global.css") {
+        // This assumes that a request to `/global.css` will
+        // always come after a request to `/` or `/<article>`
+        return new Response(globalStyleCache, RESPONSE_INIT.css);
+    } else if (url.pathname.startsWith("/assets/")) {
+        const fname = url.pathname.slice(8);
+        const availableAssets = Array.from(Deno.readDirSync("src/assets")).map(
+            (f) => f.name
+        );
 
-            return new Response("404: Not found", RESPONSE_INIT.notFound);
+        if (availableAssets.includes(fname))
+            // TODO: Account for PNGs & JPEGs
+            return new Response(
+                Deno.readTextFileSync(`src/assets/${fname}`),
+                RESPONSE_INIT.svg
+            );
+        else return notFoundResponse;
+    } else if (getAvailableArticles().includes(url.pathname.slice(1))) {
+        return article(url.pathname.slice(1));
+    } else {
+        return notFoundResponse;
     }
 }
 
