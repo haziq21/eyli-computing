@@ -127,12 +127,12 @@ function generateNavBar(): string {
 
         // HTML template for subheading navigation
         const subheadingTemplate = Deno.readTextFileSync(
-            "src/public/subchapterNav.html"
+            "src/html/subchapterNav.html"
         );
 
         // HTML template for article navigation
         const articleTemplate = Deno.readTextFileSync(
-            "src/public/chapterNav.html"
+            "src/html/chapterNav.html"
         );
         let allSubheadings = "";
 
@@ -177,10 +177,10 @@ const RESPONSE_INIT = {
 /** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
     const hydratedPage = hydrate(
-        Deno.readTextFileSync("src/public/layout.html"),
+        Deno.readTextFileSync("src/html/layout.html"),
         {
             title: "EYLI Computing",
-            article: Deno.readTextFileSync("src/public/index.html"),
+            article: Deno.readTextFileSync("src/html/index.html"),
             // The next article is the first article
             nextUrl: getAvailableArticles().sort()[0],
             nav: generateNavBar(),
@@ -209,7 +209,7 @@ function article(articleId: string): Response {
     const md = Deno.readTextFileSync(`pages/${articleId}.md`);
 
     const hydratedPage = hydrate(
-        Deno.readTextFileSync("src/public/layout.html"),
+        Deno.readTextFileSync("src/html/layout.html"),
         {
             // E.g. "Flowcharts | EYLI Computing"
             title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
