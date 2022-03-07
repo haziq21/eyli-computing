@@ -20,7 +20,7 @@
     </nav>
     <main class="h-full flex lg:ml-80">
         <a href="{{prevUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center
-        invisible [[prevButton]]visible[[prevButton]] duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+        prevButton duration-100 hover:bg-amber-200 hover:bg-opacity-20">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
                 <path d="M0 0h24v24H0V0z" fill="none" />
@@ -28,12 +28,12 @@
             </svg>
         </a>
 
-        <article class="flex flex-col mx-auto w-max max-w-[50rem] text-zinc-300 px-8 pt-4 lg:pt-16">
+        <article class="flex flex-col mx-auto w-full max-w-[50rem] text-zinc-300 px-8 pt-4 lg:pt-16">
             {{slot}}
         </article>
 
         <a href="{{nextUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center 
-        invisible [[nextButton]]visible[[nextButton]] duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+        nextButton duration-100 hover:bg-amber-200 hover:bg-opacity-20">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
                 <path d="M0 0h24v24H0V0z" fill="none" />

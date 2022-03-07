@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
+
 import { Processor } from "https://esm.sh/windicss/lib";
 import { HTMLParser, CSSParser } from "https://esm.sh/windicss/utils/parser";
 import { StyleSheet } from "https://esm.sh/windicss/utils/style";
+import config from "../windi.config.ts";
+
 import { micromark } from "https://esm.sh/micromark";
 import { gfm, gfmHtml } from "https://esm.sh/micromark-extension-gfm";
 
@@ -13,7 +16,7 @@ import { gfm, gfmHtml } from "https://esm.sh/micromark-extension-gfm";
  */
 function compileWindi(html: string): { html: string; css: string } {
     // Get windi processor
-    const processor = new Processor();
+    const processor = new Processor(config);
 
     // Parse HTML to get array of class matches with location
     const htmlParser = new HTMLParser(html);
@@ -71,7 +74,7 @@ function compileWindi(html: string): { html: string; css: string } {
     };
 }
 
-/** Return an array of all the Markdown articles in `/pages`. */
+/** Return an array of all the Markdown articles in `../pages`. */
 function getAvailableArticles(): string[] {
     const articles: string[] = [];
 
@@ -94,29 +97,14 @@ function generateHtml(md: string): string {
 }
 
 /**
- * Given a `(slot id, content to hydrate)` hashmap, return  `layout.html`
+ * Given IDs for slots and their  hashmap, return  `layout.html`
  * with every `{{slot id}}` replaced by the corresponding content to hydrate.
  */
-function hydrateLayout(
-    targets: Record<string, string>,
-    exclude: string[] = []
-): string {
+function hydrateLayout(targets: Record<string, string>): string {
     let html = Deno.readTextFileSync("src/public/layout.html");
 
     for (const t in targets) {
         html = html.replace(`{{${t}}}`, targets[t]);
-    }
-
-    const blocks = html.matchAll(/(\[\[[a-zA-Z]+\]\])([^]+)\1/gm);
-    for (const b of Array.from(blocks).reverse()) {
-        if (exclude.includes(b[1].slice(2, -2))) {
-            html = html.slice(0, b.index!) + html.slice(b.index! + b[0].length);
-        } else {
-            html =
-                html.slice(0, b.index!) +
-                b[2] +
-                html.slice(b.index! + b[0].length);
-        }
     }
 
     return html;
@@ -145,16 +133,15 @@ const RESPONSE_INIT = {
 
 /** Response to the `/` route of the webapp. Writes to `globalStyleCache`. */
 function index(): Response {
-    const hydratedPage = hydrateLayout(
-        {
-            title: "EYLI Computing",
-            slot: Deno.readTextFileSync("src/public/index.html"),
-            nextUrl: getAvailableArticles().sort()[0],
-        },
-        ["prevButton"]
-    );
+    const hydratedPage = hydrateLayout({
+        title: "EYLI Computing",
+        slot: Deno.readTextFileSync("src/public/index.html"),
+        // The next article is the first article
+        nextUrl: getAvailableArticles().sort()[0],
+    });
 
     const { html, css } = compileWindi(hydratedPage);
+    // Save the stylesheet
     globalStyleCache = css;
 
     return new Response(html, RESPONSE_INIT.html);
@@ -170,18 +157,22 @@ function article(articleId: string): Response {
     const isLastArticle = articleId === articles.at(-1);
     const md = Deno.readTextFileSync(`pages/${articleId}.md`);
 
-    const hydratedPage = hydrateLayout(
-        {
-            title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
-            slot: generateHtml(md),
-            prevUrl: isFirstArticle
-                ? "/"
-                : "/" + articles[articles.indexOf(articleId) - 1],
-        },
-        isLastArticle ? ["nextButton"] : []
-    );
+    const hydratedPage = hydrateLayout({
+        // E.g. "Flowcharts | EYLI Computing"
+        title: md.match(/^#\s(.+)$/m)![1] + " | EYLI Computing",
+        slot: generateHtml(md),
+        prevUrl: isFirstArticle
+            ? "/"
+            : "/" + articles[articles.indexOf(articleId) - 1],
+        nextUrl: "/" + articles[articles.indexOf(articleId) + 1],
+    });
 
-    const { html, css } = compileWindi(hydratedPage);
+    let { html, css } = compileWindi(hydratedPage);
+
+    // Hide next button on the last article
+    if (isLastArticle) css += ".nextButton {visibility: hidden;}";
+
+    // Save the stylesheet
     globalStyleCache = css;
 
     return new Response(html, RESPONSE_INIT.html);
