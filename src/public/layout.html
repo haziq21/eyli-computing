@@ -22,8 +22,7 @@
         </div>
     </nav>
     <main class="h-full flex lg:ml-80">
-        <a href="{{prevUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center
-        prevButton duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+        <a href="{{prevUrl}}" class="prevButton">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
                 <path d="M0 0h24v24H0V0z" fill="none" />
@@ -31,12 +30,12 @@
             </svg>
         </a>
 
-        <article class="flex flex-col mx-auto w-full max-w-[50rem] text-zinc-300 px-8 pt-4 pb-40 lg:pt-16">
+        <article class="w-full max-w-[50rem] xl:max-w-[64rem] mx-auto px-8 xl:px-36 pt-4 lg:pt-16 pb-40 
+            text-zinc-300 flex flex-col">
             {{article}}
         </article>
 
-        <a href="{{nextUrl}}" class="min-w-28 h-full hidden xl:flex items-center justify-center 
-        nextButton duration-100 hover:bg-amber-200 hover:bg-opacity-20">
+        <a href="{{nextUrl}}" class="nextButton right-0">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
                 <path d="M0 0h24v24H0V0z" fill="none" />
@@ -47,13 +46,19 @@
 </body>
 
 <style lang="windi">
+    .prevButton,
+    .nextButton {
+        @apply min-w-28 h-full fixed hidden xl: flex items-center justify-center;
+        @apply duration-100 hover: bg-amber-200 hover:bg-opacity-20;
+    }
+
     article {
         & p {
             @apply mt-2;
         }
 
         & h2 {
-            @apply text-white text-2xl font-semibold mt-7;
+            @apply text-white text-2xl font-semibold mt-8;
         }
 
         & h1 {
@@ -61,6 +66,8 @@
         }
 
         & table {
+            @apply mt-7;
+
             & thead {
                 @apply border-b-2 border-amber-200;
             }
