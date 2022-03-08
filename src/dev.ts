@@ -104,7 +104,7 @@ function generateHtml(md: string): string {
  */
 function hydrate(html: string, targets: Record<string, string>): string {
     for (const t in targets) {
-        html = html.replace(`{${t}}`, targets[t]);
+        html = html.replaceAll(`{${t}}`, targets[t]);
     }
 
     return html;
