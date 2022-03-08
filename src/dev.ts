@@ -100,11 +100,11 @@ function generateHtml(md: string): string {
 
 /**
  * Given IDs for slots and their  hashmap, return  the HTML
- * with every `{{slot id}}` replaced by the corresponding content to hydrate.
+ * with every `{slot id}` replaced by the corresponding content to hydrate.
  */
 function hydrate(html: string, targets: Record<string, string>): string {
     for (const t in targets) {
-        html = html.replace(`{{${t}}}`, targets[t]);
+        html = html.replace(`{${t}}`, targets[t]);
     }
 
     return html;
