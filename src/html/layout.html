@@ -21,7 +21,7 @@
             {nav}
         </div>
     </nav>
-    <main class="h-fit flex lg:ml-80">
+    <main class="lg:ml-80 pb-10 xl:pb-28">
         <a href="{prevUrl}" class="prevButton">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
@@ -30,18 +30,38 @@
             </svg>
         </a>
 
-        <article class="w-full max-w-[50rem] xl:max-w-[64rem] h-fit mx-auto px-8 xl:px-36 pt-4 lg:pt-16 pb-40 
+        <article class="w-full max-w-[50rem] xl:max-w-[64rem] mx-auto px-8 xl:px-36 pt-4 lg:pt-16
             text-zinc-300 flex flex-col">
             {article}
         </article>
 
-        <a href="{nextUrl}" class="nextButton right-0">
+        <a href="{nextUrl}" class="nextButton right-0 top-0">
             <svg xmlns="http://www.w3.org/2000/svg" height="56px" viewBox="0 0 24 24" width="56px"
                 class="fill-zinc-300">
                 <path d="M0 0h24v24H0V0z" fill="none" />
                 <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" />
             </svg>
         </a>
+
+        <span
+            class="flex justify-between xl:hidden max-w-[44rem] px-12 mx-auto mt-16 uppercase font-semibold text-lg tracking-wider">
+            <a href="{prevUrl}">
+                <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="32px"
+                    viewBox="0 0 24 24" width="32px" class="fill-amber-200 inline -mt-1 mr-2">
+                    <rect fill="none" height="24" width="24" />
+                    <path d="M9,19l1.41-1.41L5.83,13H22V11H5.83l4.59-4.59L9,5l-7,7L9,19z" />
+                </svg>
+                Prev
+            </a>
+            <a href="{nextUrl}">
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="32px"
+                    viewBox="0 0 24 24" width="32px" class="fill-amber-200 inline -mt-1 ml-2">
+                    <rect fill="none" height="24" width="24" />
+                    <path d="M15,5l-1.41,1.41L18.17,11H2V13h16.17l-4.59,4.59L15,19l7-7L15,5z" />
+                </svg>
+            </a>
+        </span>
     </main>
 </body>
 
