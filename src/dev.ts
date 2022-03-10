@@ -1,80 +1,11 @@
 /** This file contains the code for the dev server, to be ran whilst developing the webapp. */
 
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
-
-import { Processor } from "https://esm.sh/windicss/lib";
-import { HTMLParser, CSSParser } from "https://esm.sh/windicss/utils/parser";
-import { StyleSheet } from "https://esm.sh/windicss/utils/style";
-import config from "../windi.config.ts";
-
 import { micromark } from "https://esm.sh/micromark";
 import { gfm, gfmHtml } from "https://esm.sh/micromark-extension-gfm";
+import { buildWindi } from "./windi.ts";
 
 /**************        CODE FOR SITE GENERATION        **************/
-
-/**
- * Given a HTML document containing Windi classes, output the corresponding stylesheet.
- * Taken from https://windicss.org/integrations/javascript.html.
- */
-function compileWindi(html: string): { html: string; css: string } {
-    // Get windi processor
-    const processor = new Processor(config);
-
-    // Parse HTML to get array of class matches with location
-    const htmlParser = new HTMLParser(html);
-
-    // Generate preflight based on the HTML we input
-    const preflightSheet = processor.preflight(html);
-
-    const PREFIX = "windi-";
-    const outputCSS: StyleSheet[] = [];
-    let outputHTML = "";
-    let indexStart = 0;
-
-    htmlParser.parseClasses().forEach((p) => {
-        // Add HTML substring from index to match start
-        outputHTML += html.substring(indexStart, p.start);
-
-        // Generate stylesheet
-        const style = processor.compile(p.result, PREFIX);
-
-        // Add the stylesheet to the styles stack
-        outputCSS.push(style.styleSheet);
-
-        // Append ignored classes and push to output
-        outputHTML += [style.className, ...style.ignored].join(" ");
-
-        // Mark the end as our new start for next iteration
-        indexStart = p.end;
-    });
-
-    // Include styles found in `<style lang="windi">` tags
-    const block = html.match(
-        /(<style lang=['"]windi["']>)([\s\S]*)(<\/style>)/
-    )!;
-    const blockStart = block.index!;
-    const contentStart = blockStart + block[1].length;
-
-    const css = html.slice(contentStart, contentStart + block[2].length);
-    const cssParser = new CSSParser(css, processor);
-    outputCSS.push(cssParser.parse());
-
-    // Append the remaining HTML
-    outputHTML += html.substring(indexStart, blockStart);
-    outputHTML += html.substring(blockStart + block[0].length);
-
-    // Build styles
-    const MINIFY = false;
-    const styles = outputCSS
-        // Extend the preflight sheet with each sheet from the stack
-        .reduce((acc, curr) => acc.extend(curr), preflightSheet)
-        .build(MINIFY);
-
-    return {
-        css: styles,
-        html: outputHTML,
-    };
-}
 
 /** Return an array of all the Markdown articles in `../pages`. */
 function getAvailableArticles(): string[] {
@@ -194,7 +125,7 @@ function index(): Response {
         }
     );
 
-    let { html, css } = compileWindi(hydratedPage);
+    let css = buildWindi(hydratedPage);
 
     // Hide prev button on the homepage
     css += ".prevButton {visibility: hidden;}";
@@ -202,7 +133,7 @@ function index(): Response {
     // Save the stylesheet
     globalStyleCache = css;
 
-    return new Response(html, RESPONSE_INIT.html);
+    return new Response(hydratedPage, RESPONSE_INIT.html);
 }
 
 /**
@@ -229,7 +160,7 @@ function article(articleId: string): Response {
         }
     );
 
-    let { html, css } = compileWindi(hydratedPage);
+    let css = buildWindi(hydratedPage);
 
     // Hide next button on the last article
     if (isLastArticle) css += ".nextButton {visibility: hidden;}";
@@ -237,7 +168,7 @@ function article(articleId: string): Response {
     // Save the stylesheet
     globalStyleCache = css;
 
-    return new Response(html, RESPONSE_INIT.html);
+    return new Response(hydratedPage, RESPONSE_INIT.html);
 }
 
 let globalStyleCache = "";
